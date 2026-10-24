@@ -1,0 +1,2 @@
+# Closed evaluation candidates must not be added to a public PR.
+eval/queries/holdout.private.jsonl

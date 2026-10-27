@@ -1,0 +1,2 @@
+# Eval fingerprints refer to exact stored bytes on every OS.
+eval/** -text

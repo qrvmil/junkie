@@ -1,0 +1,254 @@
+{
+  "manifest_schema_version": 1,
+  "dataset_id": "junkie_kt2_heldout_v1",
+  "dataset_version": "1.2.0",
+  "case_schema_version": 3,
+  "split": "holdout",
+  "status": "frozen_snapshot_owner_accepted",
+  "snapshot_date": "2026-10-27",
+  "evaluation_gate": "KT4_only",
+  "source_git_commit": "ccc5a9c2a42b72b23ce537ee1dd52381c0a6d0b2",
+  "counts": {
+    "visible_search": 140,
+    "visible_ingestion": 10,
+    "visible_total": 150,
+    "heldout_search": 30,
+    "overall_total": 180
+  },
+  "case_ids": [
+    "H001",
+    "H002",
+    "H003",
+    "H004",
+    "H005",
+    "H006",
+    "H007",
+    "H008",
+    "H009",
+    "H010",
+    "H011",
+    "H012",
+    "H013",
+    "H014",
+    "H015",
+    "H016",
+    "H017",
+    "H018",
+    "H019",
+    "H020",
+    "H021",
+    "H022",
+    "H023",
+    "H024",
+    "H025",
+    "H026",
+    "H027",
+    "H028",
+    "H029",
+    "H030"
+  ],
+  "composition": {
+    "category_counts": {
+      "ambiguity": 2,
+      "dates": 3,
+      "dialogue_continuation": 3,
+      "exact_search": 4,
+      "exceptional_input": 2,
+      "filters": 3,
+      "no_answer_offtopic": 2,
+      "security": 2,
+      "semantic_search": 7,
+      "typos_languages": 2
+    },
+    "action_counts": {
+      "clarify": 4,
+      "no_result": 3,
+      "refuse": 1,
+      "search": 22
+    },
+    "fixture_counts": {
+      "base": 27,
+      "temporal_spread": 2,
+      "two_nonempty_users": 1
+    },
+    "group_count": 9,
+    "case_kind_counts": {
+      "input_boundary": 2,
+      "security_probe": 2,
+      "synthetic_user_request": 26
+    }
+  },
+  "artifacts": {
+    "ciphertext": {
+      "path": "eval/heldout/heldout.age",
+      "format": "age-v1 X25519",
+      "sha256": "797f60dc36d2e7a2092fa3c85ea2cf49af47415c9e529fe43061e23f423316e5",
+      "bytes": 43981
+    },
+    "plaintext": {
+      "path": "eval/heldout/private/heldout.jsonl",
+      "format": "JSONL UTF-8",
+      "record_count": 30,
+      "sha256": "af14ac1e727bb63abc9c1c45cf1caf447e768a7db9ad4e076581296884d6fe62",
+      "bytes": 43781,
+      "git_policy": "ignored; never commit; owner inspection only before KT4",
+      "permissions": "0600"
+    }
+  },
+  "source_snapshot": {
+    "visible_search": {
+      "path": "eval/queries/dev.jsonl",
+      "sha256": "cd1baa9d3bcda88d0b88127e89ef82de10ce848ca214e38e66a67331348d542b",
+      "record_count": 140
+    },
+    "visible_ingestion": {
+      "path": "eval/queries/ingestion.jsonl",
+      "sha256": "a6bf8ed0edf38af7655bb847660d1762f6bd492d748c73d3c5c12d72ed4c9421",
+      "record_count": 10
+    },
+    "documents_manifest": {
+      "path": "eval/documents.jsonl",
+      "sha256": "cc2153ac5a173f29b05c5dda495f06666a755d35844d7ab83ac22cddf0505db7",
+      "record_count": 88
+    },
+    "environment": {
+      "path": "eval/fixtures/environment.json",
+      "sha256": "7161879afa79d6ca9f8dcff14120ef3f61b8b8ab72993fceb3896c0188e03d39"
+    },
+    "tool_contract": {
+      "path": "eval/fixtures/tool_contract.json",
+      "sha256": "088a0e7db92225f821e653f2fff98923dd283fbf1047eb83e563825beb9709c5"
+    }
+  },
+  "corpus_snapshot": {
+    "document_count": 88,
+    "all_manifest_sha256_verified": true,
+    "inventory_encoding": "UTF-8 canonical JSON sorted by doc_id; compact separators; no trailing newline",
+    "inventory_sha256": "282ac5ff02f8b8083968bd5e34d4d1c6b6ca0a1827a7f7cad413715d2e6ea12f"
+  },
+  "fixture_snapshot": [
+    {
+      "path": "eval/fixtures/corrupted.pdf",
+      "sha256": "5c4ed2cc21fd6acefdb72b2488905d492ac68c813ee071614dcc89798ca21bd2"
+    },
+    {
+      "path": "eval/fixtures/environment.json",
+      "sha256": "7161879afa79d6ca9f8dcff14120ef3f61b8b8ab72993fceb3896c0188e03d39"
+    },
+    {
+      "path": "eval/fixtures/headscale_injection.md",
+      "sha256": "9e868424a8e451634162f3fd892435a9f0b0e47b4fa9da576b9b5f7bc38826ba"
+    },
+    {
+      "path": "eval/fixtures/minimal.tex",
+      "sha256": "42fe70e9ebd02735fbc43b93b416f5c40120a2f9c419524b1ea15078c2acf482"
+    },
+    {
+      "path": "eval/fixtures/tool_contract.json",
+      "sha256": "088a0e7db92225f821e653f2fff98923dd283fbf1047eb83e563825beb9709c5"
+    },
+    {
+      "path": "eval/fixtures/user_b/apple.txt",
+      "sha256": "bc4164bbf4241b7751bae79088b0fbc72cad7a7111454b7025e1e88fffb6aa06"
+    },
+    {
+      "path": "eval/fixtures/user_b/private_notes.md",
+      "sha256": "52d5366354305fe4ac38189e6c336aa2d879ef082ca434413c94e12f571490e3"
+    }
+  ],
+  "encryption": {
+    "tool": "age",
+    "version": "v1.3.2",
+    "recipient_type": "X25519",
+    "passphrase_used": false,
+    "private_identity_storage": "outside repository; owner-only 0600",
+    "key_material_in_repository": false,
+    "key_material_logged": false,
+    "release_url": "https://github.com/FiloSottile/age/releases/tag/v1.3.2",
+    "release_asset": "age-v1.3.2-darwin-arm64.tar.gz",
+    "release_asset_sha256": "e2020b073c44f692685a24d6abc378817eb81ffaaf49fd0531ef8565f767f2f5",
+    "release_digest_check": "matched GitHub release asset digest",
+    "decrypt_roundtrip": "passed for version 1.2.0; restored all 30 accepted request texts and contexts byte-identically to current plaintext; temporary decrypted copy deleted"
+  },
+  "validation": {
+    "case_count": 30,
+    "exact_query_overlap": 0,
+    "group_id_overlap": 0,
+    "reserved_docs_used_by_topic_dev_cases": 0,
+    "reserved_docs_exposed_by_dev_inventory": 6,
+    "max_nearest_dev_character_similarity": 0.526316,
+    "schema_doc_acl_filter_call_checks": "passed on actual payload using current validate_eval.validate_case; canonical filters; metadata, fixtures, context ownership and expected calls checked",
+    "source_documents_sha256_verified": 88,
+    "content_review": "source-grounded agent review; request set accepted by owner; no claim of independent human re-annotation",
+    "style_revision": "1.1.0",
+    "coverage_limitations": [
+      "no natural more-than-five-results task in reserved topics; arbitrary mixed-topic list removed",
+      "one result for chronological sorting does not test pairwise ordering",
+      "synthetic inputs and security probes are not observed user requests"
+    ],
+    "more_than_five_result_case_count": 0,
+    "protected_eval_files_unchanged": 129,
+    "contract_revision": "1.2.0",
+    "queries_and_contexts_preserved_from_accepted_1_1_0": 30,
+    "actions_and_relevant_sets_preserved_from_accepted_1_1_0": 30,
+    "target_eval_validation": "140 dev / 30 annotated final gold passed; 28 existing annotation/eval unit tests passed"
+  },
+  "split_policy": {
+    "unit": "related semantic scenario/topic groups, including linked contexts",
+    "related_groups_kept_in_one_split": true,
+    "corpus_shared": true,
+    "document_disjoint": false,
+    "dev_inventory_exposure_disclosed": true,
+    "review_method": "all 140 visible queries inspected; corpus-derived topic-family audit, exact-query/group checks and lexical nearest-neighbour screen; semantic novelty judged manually, not inferred from new IDs",
+    "lexical_screen": "NFKC casefold word normalization; difflib SequenceMatcher; no score >=0.75; query, context and topical novelty reviewed separately"
+  },
+  "style_research": {
+    "method": "Qualitative review of user-reported search strings, public requests for re-finding, and empirical personal-search studies; these evidence types distinguished; no frequency or representativeness claims; synthetic requests authored independently",
+    "review_date": "2026-10-27",
+    "local_report": "eval/heldout/private/query_style_research.md",
+    "local_report_sha256": "f43282c9f359240da131ec2871efc71d45196cb21eec26795b4fe1ab9f316f38",
+    "sources": [
+      "https://www.reddit.com/r/ObsidianMD/comments/1o1hasr/is_obsidian_search_trash_or_am_i_just_not_using/",
+      "https://www.reddit.com/r/ObsidianMD/comments/1pmxhvh/i_finally_figured_out_why_obsidian_search_is/",
+      "https://www.reddit.com/r/ObsidianMD/comments/141irkm",
+      "https://qna.habr.com/q/794945",
+      "https://www.linux.org.ru/forum/general/14300822",
+      "https://javascript.ru/forum/misc/36579-pomogite-najjti-statyu-na-ehtom-sajjte.html",
+      "https://vc.ru/id387464/90813-pomogite-naiti-statyu-v-vcru",
+      "https://qna.habr.com/q/21084",
+      "https://www.microsoft.com/en-us/research/wp-content/uploads/2003/01/siscore-sigir2003-final.pdf",
+      "https://essay.utwente.nl/fileshare/file/94310/Smienk_MA_EEMCS.pdf"
+    ]
+  },
+  "freeze_policy": {
+    "immutable_fields": "payload, expected labels, fixtures, source hashes and validation rules for this version",
+    "owner_review": "Request set accepted by owner before publication; local plaintext remains available for inspection and must not be used to tune search or prompts",
+    "revisions": "any correction creates a new explicit dataset version and new ciphertext/hash before final freeze; never silently replace this snapshot",
+    "kt4": "fix evaluated system/configuration first; decrypt in evaluator-only environment; no tuning or repeated selection on holdout feedback; corpus/source mismatch requires a versioned decision"
+  },
+  "revision": {
+    "supersedes_dataset_version": "1.1.0",
+    "previous_plaintext_sha256": "9703354a43ef719decf3d8a444ae57c5295da45f61dbdb98310e7cbdb2b84f1d",
+    "previous_ciphertext_sha256": "5e249471dc1aa48dc4e812e4b2a43d6c99ed16111f6d9bf8f0d123226d58afef",
+    "reason": "Align existing holdout with canonical tool contract and source snapshot of kt2-gold-consistency; require source read for an unindexed content date",
+    "query_texts_changed": 0,
+    "contexts_changed": 0,
+    "expected_blocks_changed": 2,
+    "relevant_sets_changed": 0,
+    "actions_changed": 0
+  },
+  "source_branch": "kt2-gold-consistency",
+  "owner_acceptance": "Owner accepted the request set and authorized encrypted publication; source labels checked by agent, not a new independent human double annotation",
+  "revision_history": [
+    {
+      "dataset_version": "1.1.0",
+      "supersedes_dataset_version": "1.0.0",
+      "previous_plaintext_sha256": "7cba6e975db1e361c9f0dc14ff7878e7e224976ffcb605ab3dd18900889a08b6",
+      "previous_ciphertext_sha256": "7abe32d971cff40ebc129c5770e0a468557609f522499408f058518ab7794860",
+      "reason": "Source-researched rewrite of request style, connected dialogue contexts, and resulting ground truth; artificial mixed-topic overflow case replaced",
+      "query_texts_changed": 29,
+      "contexts_changed": 5,
+      "expected_blocks_changed": 8
+    }
+  ]
+}

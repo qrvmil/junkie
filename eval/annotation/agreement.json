@@ -1,0 +1,215 @@
+{
+  "case_count": 30,
+  "actions": {
+    "matched": 30,
+    "total": 30,
+    "fraction": 1.0,
+    "percent": 100.0,
+    "cohens_kappa": 1.0,
+    "p_observed": 1.0,
+    "p_expected": 0.76,
+    "counts_a": {
+      "search": 26,
+      "refuse": 2,
+      "no_result": 2
+    },
+    "counts_b": {
+      "search": 26,
+      "refuse": 2,
+      "no_result": 2
+    },
+    "confusion_matrix": {
+      "search": {
+        "search": 26,
+        "clarify": 0,
+        "no_result": 0,
+        "refuse": 0
+      },
+      "clarify": {
+        "search": 0,
+        "clarify": 0,
+        "no_result": 0,
+        "refuse": 0
+      },
+      "no_result": {
+        "search": 0,
+        "clarify": 0,
+        "no_result": 2,
+        "refuse": 0
+      },
+      "refuse": {
+        "search": 0,
+        "clarify": 0,
+        "no_result": 0,
+        "refuse": 2
+      }
+    },
+    "disagreement_matrix": {
+      "search": {
+        "search": 0,
+        "clarify": 0,
+        "no_result": 0,
+        "refuse": 0
+      },
+      "clarify": {
+        "search": 0,
+        "clarify": 0,
+        "no_result": 0,
+        "refuse": 0
+      },
+      "no_result": {
+        "search": 0,
+        "clarify": 0,
+        "no_result": 0,
+        "refuse": 0
+      },
+      "refuse": {
+        "search": 0,
+        "clarify": 0,
+        "no_result": 0,
+        "refuse": 0
+      }
+    }
+  },
+  "documents": {
+    "applicability": "At least one annotator chose search; all other pairs excluded",
+    "applicable_ids": [
+      "E06",
+      "E15",
+      "E20",
+      "E21",
+      "E31",
+      "E35",
+      "E38",
+      "E41",
+      "E43",
+      "E46",
+      "E48",
+      "E55",
+      "E57",
+      "E58",
+      "E61",
+      "E63",
+      "E69",
+      "E72",
+      "E74",
+      "E82",
+      "E87",
+      "E89",
+      "E91",
+      "E93",
+      "E133",
+      "E135"
+    ],
+    "excluded_ids": [
+      "E24",
+      "E27",
+      "E78",
+      "E79"
+    ],
+    "exact_set_agreement": {
+      "matched": 26,
+      "total": 26,
+      "fraction": 1.0,
+      "percent": 100.0
+    },
+    "mean_jaccard": 1.0,
+    "jaccard_by_id": {
+      "E06": 1.0,
+      "E15": 1.0,
+      "E20": 1.0,
+      "E21": 1.0,
+      "E31": 1.0,
+      "E35": 1.0,
+      "E38": 1.0,
+      "E41": 1.0,
+      "E43": 1.0,
+      "E46": 1.0,
+      "E48": 1.0,
+      "E55": 1.0,
+      "E57": 1.0,
+      "E58": 1.0,
+      "E61": 1.0,
+      "E63": 1.0,
+      "E69": 1.0,
+      "E72": 1.0,
+      "E74": 1.0,
+      "E82": 1.0,
+      "E87": 1.0,
+      "E89": 1.0,
+      "E91": 1.0,
+      "E93": 1.0,
+      "E133": 1.0,
+      "E135": 1.0
+    }
+  },
+  "filters": {
+    "matched": 25,
+    "total": 30,
+    "fraction": 0.8333333333333334,
+    "percent": 83.33333333333333
+  },
+  "order_by": {
+    "matched": 30,
+    "total": 30,
+    "fraction": 1.0,
+    "percent": 100.0
+  },
+  "has_more": {
+    "matched": 30,
+    "total": 30,
+    "fraction": 1.0,
+    "percent": 100.0
+  },
+  "clarify_candidates": {
+    "matched": 0,
+    "total": 0,
+    "fraction": null,
+    "percent": null,
+    "applicable_ids": []
+  },
+  "disagreement_count": 5,
+  "disputed_ids": [
+    "E58",
+    "E69",
+    "E72",
+    "E82",
+    "E133"
+  ],
+  "differing_fields": {
+    "E58": [
+      "filters"
+    ],
+    "E69": [
+      "filters"
+    ],
+    "E72": [
+      "filters"
+    ],
+    "E82": [
+      "filters"
+    ],
+    "E133": [
+      "filters"
+    ]
+  },
+  "categories": {
+    "ambiguity": 3,
+    "dates": 4,
+    "dialogue_continuation": 3,
+    "exact_search": 1,
+    "filters": 3,
+    "more_than_five_results": 1,
+    "no_answer_offtopic": 3,
+    "security": 3,
+    "semantic_search": 7,
+    "typos_languages": 2
+  },
+  "input_sha256": {
+    "annotator_a": "e7f579f513c7565b27131962b2e9996da115df6af667ff409590fb7e005ba410",
+    "annotator_b": "30d0b0996538e3c6b7e28b254fa769a4bafab96f6ecca47c8268dd22c8355fc4",
+    "blind_cases": "1e591f06b5d50fbbf30aabbc90e98cea4a3822b0ad2bc17702d3a4bfdb8397b6",
+    "documents": "cc2153ac5a173f29b05c5dda495f06666a755d35844d7ab83ac22cddf0505db7",
+    "environment": "7161879afa79d6ca9f8dcff14120ef3f61b8b8ab72993fceb3896c0188e03d39"
+  }
+}

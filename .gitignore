@@ -1,3 +1,9 @@
 # Closed evaluation candidates must not be added to a public PR.
 eval/queries/holdout.private.jsonl
 __pycache__/
+
+# KT2 holdout: only ciphertext, its manifest and public instructions may enter Git.
+/eval/heldout/*
+!/eval/heldout/heldout.age
+!/eval/heldout/manifest.json
+!/eval/heldout/README.md

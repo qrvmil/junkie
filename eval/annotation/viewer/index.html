@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark">
+  <title>Junkie · Проверка разметки</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="data.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header><a class="brand" href="#">junkie<span> / review</span></a><div class="header-actions"><span id="progressText"></span><button id="export" class="quiet">Экспорт ↓</button></div></header>
+  <div class="progress"><div id="progressBar"></div></div>
+  <main id="stage">
+    <section class="case" aria-label="Кейс для проверки">
+      <div class="eyebrow"><button id="casePicker" class="quiet">E06 <span>⌄</span></button><span id="position"></span><span id="verdict" class="verdict"></span></div>
+      <div id="caseScroll" class="case-scroll">
+        <div id="context" class="context" hidden></div>
+        <h1 id="query"></h1>
+        <div class="meta" id="meta"></div>
+        <div class="section-label"><span>ПРЕДВАРИТЕЛЬНАЯ РАЗМЕТКА</span><span id="action" class="action"></span></div>
+        <div id="documents" class="documents"></div>
+        <div id="filters" class="filters"></div>
+        <div class="tools"><button id="catalogButton" class="quiet">Все документы кейса ↗</button><button id="editButton" class="quiet">Предложить правку</button><button id="jsonButton" class="quiet">JSON</button></div>
+        <div id="editor" class="editor" hidden>
+          <label for="proposedAction">Предлагаемое действие</label><select id="proposedAction"><option value="search">search</option><option value="clarify">clarify</option><option value="no_result">no_result</option><option value="refuse">refuse</option></select>
+          <label for="proposedIds">ID документов через запятую</label><input id="proposedIds" placeholder="doc_001, doc_002">
+          <p class="hint">Для clarify — кандидаты уточнения. Для no_result / refuse список пуст.</p>
+          <label for="proposedFilters">Фильтры (JSON)</label><textarea id="proposedFilters" rows="3" spellcheck="false"></textarea>
+          <label for="proposedOrder">Порядок</label><select id="proposedOrder"><option value="relevance">relevance</option><option value="uploaded_at_asc">uploaded_at_asc</option><option value="uploaded_at_desc">uploaded_at_desc</option></select>
+          <div class="tools"><button id="saveProposal">Сохранить правку</button><button id="clearProposal" class="quiet">Убрать правку</button></div><p id="editorMessage" role="status"></p>
+        </div>
+        <pre id="raw" hidden></pre>
+        <textarea id="note" class="note" rows="2" aria-label="Заметка к кейсу" placeholder="Заметка для себя…"></textarea>
+        <p id="storageWarning" class="warning" hidden>Браузер не разрешил автосохранение. Экспортируйте оценки перед закрытием.</p>
+      </div>
+      <footer><div class="rating"><button data-rating="accept" class="accept"><kbd>1</kbd> Верно</button><button data-rating="reject" class="reject"><kbd>2</kbd> Ошибка</button><button data-rating="unsure"><kbd>3</kbd> Не уверен</button></div><div class="footer-bottom"><span id="saveStatus">Оценки сохраняются в этом браузере</span><div><button id="previous" class="nav" aria-label="Предыдущий кейс">↑</button><span class="desktop-hint">свайп / стрелки</span><button id="next" class="nav" aria-label="Следующий кейс">↓</button></div></div></footer>
+    </section>
+  </main>
+  <dialog id="reader"><div class="dialog-head"><div><span id="readerId" class="tiny"></span><h2 id="readerTitle"></h2></div><button id="closeReader" class="nav" aria-label="Закрыть документ">×</button></div><div class="reader-tools"><input id="findText" type="search" placeholder="Найти в тексте…" aria-label="Найти в тексте документа"><span id="findCount"></span><a id="original" target="_blank" rel="noopener">Оригинал ↗</a></div><div id="readerMeta" class="meta"></div><pre id="readerText" tabindex="0"></pre></dialog>
+  <dialog id="catalog"><div class="dialog-head"><h2 id="catalogTitle">Документы кейса</h2><button id="closeCatalog" class="nav" aria-label="Закрыть список">×</button></div><input id="catalogSearch" type="search" placeholder="Название, ID или текст…" aria-label="Поиск среди документов кейса"><div id="catalogList" class="catalog-list"></div></dialog>
+  <dialog id="picker"><div class="dialog-head"><h2>30 кейсов</h2><button id="closePicker" class="nav" aria-label="Закрыть кейсы">×</button></div><div id="pickerList"></div></dialog>
+  <div id="toast" role="status" hidden></div>
+</body>
+</html>

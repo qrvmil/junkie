@@ -1,0 +1,2 @@
+# Required only for validating PDF source anchors; other readers use the standard library.
+pypdf==6.10.0

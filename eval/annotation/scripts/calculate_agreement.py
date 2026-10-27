@@ -222,7 +222,7 @@ def main():
     # Save commands for the actual inputs, including non-default annotation filenames.
     def display_path(path):
         resolved = Path(path).resolve()
-        return str(resolved.relative_to(ROOT.parent)) if resolved.is_relative_to(ROOT.parent) else str(resolved)
+        return resolved.relative_to(ROOT.parent).as_posix() if resolved.is_relative_to(ROOT.parent) else resolved.as_posix()
 
     calculation = ["python3", display_path(__file__), display_path(args.annotator_a), display_path(args.annotator_b),
                    "--output-json", display_path(args.output_json), "--output-md", display_path(args.output_md)]
@@ -241,8 +241,8 @@ def main():
                            "--annotator-b", display_path(args.annotator_b)]
     commands = [shlex.join(validation), shlex.join(calculation),
                 "python3 -m unittest discover -s eval/annotation/scripts -p 'test_*.py'"]
-    args.output_json.write_text(json.dumps(result, ensure_ascii=False, indent=2, allow_nan=False) + "\n", encoding="utf-8")
-    args.output_md.write_text(render_report(result, a, b, decisions, final, method, commands), encoding="utf-8")
+    args.output_json.write_text(json.dumps(result, ensure_ascii=False, indent=2, allow_nan=False) + "\n", encoding="utf-8", newline="\n")
+    args.output_md.write_text(render_report(result, a, b, decisions, final, method, commands), encoding="utf-8", newline="\n")
     print(f"Calculated {result['case_count']} cases; {result['disagreement_count']} disagreements")
     print(f"Actions: {percentage(result['actions'])}; kappa: {number(result['actions']['cohens_kappa'])}")
     print(f"Documents: {percentage(result['documents']['exact_set_agreement'])}; Jaccard: {number(result['documents']['mean_jaccard'])}")

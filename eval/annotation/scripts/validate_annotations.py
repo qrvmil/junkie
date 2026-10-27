@@ -75,7 +75,11 @@ def validate_row(row, case, docs):
         raise ValueError(f"{id_}: has_more must equal result count > 5")
     if not isinstance(row["order_by"], str) or row["order_by"] not in ORDERS:
         raise ValueError(f"{id_}: invalid order_by")
-    filters = row["filters"]
+    validate_filters(row["filters"], id_)
+
+
+def validate_filters(filters, id_):
+    """Canonical date ranges use inclusive gte / exclusive lt, possibly open-ended."""
     if not isinstance(filters, dict) or filters.keys() - FILTERS:
         raise ValueError(f"{id_}: invalid filter keys")
     for key, value in filters.items():
@@ -84,12 +88,12 @@ def validate_row(row, case, docs):
                 raise ValueError(f"{id_}: {key} must be a nonempty string")
             continue
         allowed = {"gte", "lt", "event"} if key == "content_date" else {"gte", "lt"}
-        if not isinstance(value, dict) or value.keys() - allowed or not {"gte", "lt"} <= value.keys():
-            raise ValueError(f"{id_}: {key} needs gte/lt date boundaries")
-        for bound in ("gte", "lt"):
+        if not isinstance(value, dict) or value.keys() - allowed or not {"gte", "lt"} & value.keys():
+            raise ValueError(f"{id_}: {key} needs at least one gte/lt date boundary")
+        for bound in {"gte", "lt"} & value.keys():
             if not isinstance(value[bound], str) or date.fromisoformat(value[bound]).isoformat() != value[bound]:
                 raise ValueError(f"{id_}: noncanonical date")
-        if value["gte"] >= value["lt"]:
+        if "gte" in value and "lt" in value and value["gte"] >= value["lt"]:
             raise ValueError(f"{id_}: invalid date range")
         if "event" in value and (not isinstance(value["event"], str) or not value["event"]):
             raise ValueError(f"{id_}: invalid content event")

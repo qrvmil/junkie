@@ -4,7 +4,7 @@
     "search_documents": {
       "arguments": {
         "query": "string",
-        "filters": "object",
+        "filters": "canonical object: format/source_type/doc_type/filename strings; uploaded_at/content_date ranges with gte and/or lt ISO dates; optional content_date.event; see queries/README.md",
         "order_by": "optional string",
         "limit": "integer <=5"
       },

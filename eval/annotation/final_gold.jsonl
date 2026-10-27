@@ -21,7 +21,7 @@
 {"id": "E74", "action": "search", "relevant_doc_ids": ["doc_029", "doc_030"], "clarify_candidates": [], "filters": {}, "order_by": "relevance", "has_more": false}
 {"id": "E78", "action": "no_result", "relevant_doc_ids": [], "clarify_candidates": [], "filters": {}, "order_by": "relevance", "has_more": false}
 {"id": "E79", "action": "no_result", "relevant_doc_ids": [], "clarify_candidates": [], "filters": {}, "order_by": "relevance", "has_more": false}
-{"id": "E82", "action": "search", "relevant_doc_ids": ["doc_020"], "clarify_candidates": [], "filters": {"content_date": {"gte": "2026-01-01", "lt": "2027-01-01"}}, "order_by": "relevance", "has_more": false}
+{"id": "E82", "action": "search", "relevant_doc_ids": ["doc_020"], "clarify_candidates": [], "filters": {}, "order_by": "relevance", "has_more": false}
 {"id": "E87", "action": "search", "relevant_doc_ids": ["doc_049", "doc_050"], "clarify_candidates": [], "filters": {}, "order_by": "relevance", "has_more": false}
 {"id": "E89", "action": "search", "relevant_doc_ids": ["doc_074", "doc_075", "doc_076", "doc_077", "doc_078", "doc_079", "doc_080", "doc_081"], "clarify_candidates": [], "filters": {"source_type": "url"}, "order_by": "relevance", "has_more": true}
 {"id": "E91", "action": "search", "relevant_doc_ids": ["doc_048", "doc_049", "doc_050", "doc_051", "doc_052", "doc_053", "doc_054"], "clarify_candidates": [], "filters": {"uploaded_at": {"gte": "2026-10-18", "lt": "2026-10-25"}}, "order_by": "relevance", "has_more": true}

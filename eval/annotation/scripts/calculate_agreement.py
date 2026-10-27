@@ -3,6 +3,7 @@
 import argparse
 import hashlib
 import json
+import shlex
 from collections import Counter
 from pathlib import Path
 
@@ -94,7 +95,7 @@ def number(value):
     return "N/A (не определено)" if value is None else f"{value:.6f}"
 
 
-def render_report(result, a, b, decisions, final, method=None):
+def render_report(result, a, b, decisions, final, method=None, commands=None):
     actions, docs = result["actions"], result["documents"]
     lines = ["# Двойная разметка Junkie", "", "## Выборка и метод", "",
              f"Кейсов: **{result['case_count']}**. Категории взяты только из поля `category` исходного набора; "
@@ -138,10 +139,19 @@ def render_report(result, a, b, decisions, final, method=None):
         final_action = row["final"]["action"] if row else "—"
         lines.append(f"| {id_} | {', '.join(result['differing_fields'][id_])} | "
                      f"{a[id_]['action']} → {b[id_]['action']} → {final_action} | {decision} |")
+    corrections = [row for row in decisions if row["id"] not in result["disputed_ids"]]
+    if corrections:
+        lines += ["", "### Общие ошибки, исправленные после сравнения", "",
+                  "Эти записи совпадали в A/B и не входят в число исходных расхождений. "
+                  "Их исправления записаны отдельно в арбитраже и не меняют метрики согласия.", "",
+                  "| ID | Исправление |", "| --- | --- |"]
+        lines += [f"| {row['id']} | " + row["comment"].replace("|", "\\|").replace("\n", " ") + " |"
+                  for row in corrections]
     if final:
-        lines += ["", f"Согласование выполнено для всех {len(decisions)} спорных кейсов. `final_gold.jsonl` содержит {len(final)} записей. "
-                  "Совпавшие A/B перенесены без смысловых изменений; оригинальные A/B сохранены. "
-                  "Полные исходные и итоговые объекты спорных случаев находятся в `adjudication.jsonl`.", "",
+        lines += ["", f"Согласование выполнено для всех {result['disagreement_count']} спорных кейсов; "
+                  f"дополнительно исправлено совпавших записей: {len(corrections)}. `final_gold.jsonl` содержит {len(final)} записей. "
+                  "Записи, не включённые в арбитраж, перенесены без смысловых изменений; оригинальные A/B сохранены. "
+                  "Полные исходные и итоговые объекты рассмотренных случаев находятся в `adjudication.jsonl`.", "",
                   "Итоговые действия: " + ", ".join(f"{key}: {count}" for key, count in sorted(Counter(r["action"] for r in final.values()).items())) + "."]
     else:
         lines += ["", "Согласование пока не представлено."]
@@ -150,12 +160,12 @@ def render_report(result, a, b, decisions, final, method=None):
               "Спорные случаи перечислены выше; причины решений выводятся при наличии согласования. "
               "Согласие разметчиков само по себе не доказывает корректность и полноту gold. "
               "Правила неоднозначности, широты релевантности и дат следует проверить при согласовании.", "",
-              "Все числа в этом отчёте и `agreement.json` вычислены из неизменённых A/B до согласования. "
+              "Все метрики согласия в этом отчёте и `agreement.json` вычислены из неизменённых A/B до согласования. "
               "Арбитраж не подменяет входы метрик. Схема фильтров и процедура описаны в README.", "", "```sh",
-              "python3 eval/annotation/scripts/prepare_blind.py",
-              "python3 eval/annotation/scripts/validate_annotations.py --check-adjudication",
-              "python3 eval/annotation/scripts/calculate_agreement.py",
-              "python3 -m unittest discover -s eval/annotation/scripts -p 'test_*.py'", "```", "",
+              *(commands or ["python3 eval/annotation/scripts/prepare_blind.py",
+                             "python3 eval/annotation/scripts/validate_annotations.py --check-adjudication",
+                             "python3 eval/annotation/scripts/calculate_agreement.py",
+                             "python3 -m unittest discover -s eval/annotation/scripts -p 'test_*.py'"]), "```", "",
               "### SHA-256 исходных входов метрик", "", "| Файл | SHA-256 |", "| --- | --- |"]
     lines += [f"| {name} | `{sha}` |" for name, sha in sorted(result["input_sha256"].items())]
     return "\n".join(lines) + "\n"
@@ -209,8 +219,30 @@ def main():
     elif args.adjudication:
         raise ValueError("Requested adjudication/final file is missing")
     method = args.method_file.read_text(encoding="utf-8") if args.method_file else None
+    # Save commands for the actual inputs, including non-default annotation filenames.
+    def display_path(path):
+        resolved = Path(path).resolve()
+        return str(resolved.relative_to(ROOT.parent)) if resolved.is_relative_to(ROOT.parent) else str(resolved)
+
+    calculation = ["python3", display_path(__file__), display_path(args.annotator_a), display_path(args.annotator_b),
+                   "--output-json", display_path(args.output_json), "--output-md", display_path(args.output_md)]
+    validation = ["python3", "eval/annotation/scripts/validate_annotations.py",
+                  display_path(args.annotator_a), display_path(args.annotator_b)]
+    if root.resolve() != ROOT.resolve():
+        calculation += ["--eval-root", display_path(root)]
+        validation += ["--eval-root", display_path(root)]
+    if args.method_file:
+        calculation += ["--method-file", display_path(args.method_file)]
+    if final:
+        calculation += ["--adjudication", display_path(adjudication_path), "--final", display_path(final_path)]
+        validation += [display_path(final_path)]
+        if final_path.resolve() == (root / "annotation/final_gold.jsonl").resolve() and adjudication_path.resolve() == (root / "annotation/adjudication.jsonl").resolve():
+            validation += ["--check-adjudication", "--annotator-a", display_path(args.annotator_a),
+                           "--annotator-b", display_path(args.annotator_b)]
+    commands = [shlex.join(validation), shlex.join(calculation),
+                "python3 -m unittest discover -s eval/annotation/scripts -p 'test_*.py'"]
     args.output_json.write_text(json.dumps(result, ensure_ascii=False, indent=2, allow_nan=False) + "\n", encoding="utf-8")
-    args.output_md.write_text(render_report(result, a, b, decisions, final, method), encoding="utf-8")
+    args.output_md.write_text(render_report(result, a, b, decisions, final, method, commands), encoding="utf-8")
     print(f"Calculated {result['case_count']} cases; {result['disagreement_count']} disagreements")
     print(f"Actions: {percentage(result['actions'])}; kappa: {number(result['actions']['cohens_kappa'])}")
     print(f"Documents: {percentage(result['documents']['exact_set_agreement'])}; Jaccard: {number(result['documents']['mean_jaccard'])}")

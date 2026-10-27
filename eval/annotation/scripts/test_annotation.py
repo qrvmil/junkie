@@ -29,6 +29,19 @@ class AgreementTests(unittest.TestCase):
         method = "Два человека независимо разметили выборку."
         self.assertIn(method, render_report(result, a, a, [], {}, method))
 
+    def test_report_includes_shared_error_without_counting_a_disagreement(self):
+        a = {"x": annotation("x", filters={"doc_type": "seminar"})}
+        final = {"x": annotation("x")}
+        result = calculate(a, a)
+        result.update(categories={"example": 1}, input_sha256={})
+        decision = {"id": "x", "annotation_a": a["x"], "annotation_b": a["x"],
+                    "final": final["x"], "comment": "Removed an unsupported metadata filter"}
+        report = render_report(result, a, a, [decision], final)
+        self.assertEqual(result["disagreement_count"], 0)
+        self.assertIn("Общие ошибки, исправленные после сравнения", report)
+        self.assertIn(decision["comment"], report)
+        self.assertIn("дополнительно исправлено совпавших записей: 1", report)
+
     def test_hand_calculated_metrics_and_disputes(self):
         a = {"a": annotation("a", docs=["d1", "d2"]),
              "b": annotation("b"), "c": annotation("c", "refuse", []),
@@ -137,7 +150,7 @@ class ValidationTests(unittest.TestCase):
                 prepare(path, path)
             self.assertEqual(path.read_text(), "original data")
 
-    def test_adjudication_requires_exact_coverage_and_immutable_originals(self):
+    def test_adjudication_requires_dispute_coverage_and_immutable_originals(self):
         a, b = {"x": annotation("x")}, {"x": annotation("x", "no_result", [])}
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "adjudication.jsonl"
@@ -148,6 +161,23 @@ class ValidationTests(unittest.TestCase):
             path.write_text(json.dumps(row) + "\n")
             with self.assertRaises(ValueError):
                 validate_adjudication(path, a, b, a)
+
+    def test_agreed_case_correction_must_be_explicit(self):
+        a = {"x": annotation("x", filters={"doc_type": "seminar"})}
+        final = {"x": annotation("x")}
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "adjudication.jsonl"
+            path.write_text("")
+            with self.assertRaises(ValueError):
+                validate_adjudication(path, a, a, final)
+            row = {"id": "x", "annotation_a": a["x"], "annotation_b": a["x"],
+                   "final": final["x"], "comment": "Removed a filter missing from source metadata"}
+            path.write_text(json.dumps(row) + "\n")
+            validate_adjudication(path, a, a, final)
+            row["final"] = a["x"]
+            path.write_text(json.dumps(row) + "\n")
+            with self.assertRaises(ValueError):
+                validate_adjudication(path, a, a, a)
 
 
 if __name__ == "__main__":

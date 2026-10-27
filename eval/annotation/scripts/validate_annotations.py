@@ -113,8 +113,9 @@ def comparable(row):
 def validate_adjudication(path, a, b, final):
     rows = load_jsonl(path)
     disputed = {id_ for id_ in a if comparable(a[id_]) != comparable(b[id_])}
-    if {row["id"] for row in rows} != disputed:
-        raise ValueError("Adjudication must cover exactly the disputed cases")
+    reviewed = {row["id"] for row in rows}
+    if not disputed <= reviewed or not reviewed <= a.keys():
+        raise ValueError("Adjudication must cover all disputed cases and contain only known IDs")
     for row in rows:
         id_ = row["id"]
         if set(row) != {"id", "annotation_a", "annotation_b", "final", "comment"}:
@@ -123,7 +124,9 @@ def validate_adjudication(path, a, b, final):
             raise ValueError(f"{id_}: adjudication changed an original annotation")
         if row["final"] != final[id_] or not isinstance(row["comment"], str) or not row["comment"].strip():
             raise ValueError(f"{id_}: missing decision or comment")
-    for id_ in set(a) - disputed:
+        if id_ not in disputed and comparable(final[id_]) == comparable(a[id_]):
+            raise ValueError(f"{id_}: an agreed case needs an actual correction to enter adjudication")
+    for id_ in set(a) - reviewed:
         if comparable(final[id_]) != comparable(a[id_]):
             raise ValueError(f"{id_}: silent change to an agreed annotation")
     return rows
@@ -135,21 +138,25 @@ def main():
     parser.add_argument("--eval-root", type=Path, default=ROOT)
     parser.add_argument("--blind", type=Path)
     parser.add_argument("--check-adjudication", action="store_true")
+    parser.add_argument("--annotator-a", type=Path, help="Original A for adjudication checks")
+    parser.add_argument("--annotator-b", type=Path, help="Original B for adjudication checks")
     args = parser.parse_args()
     root = args.eval_root
     folder = root / "annotation"
     cases = validate_blind(args.blind or folder / "blind_cases.jsonl")
     manifest = [json.loads(line) for line in (root / "documents.jsonl").read_text(encoding="utf-8").splitlines()]
     environment = json.loads((root / "fixtures/environment.json").read_text(encoding="utf-8"))
-    files = args.files or [folder / f"{name}.jsonl" for name in ("annotator_a", "annotator_b", "final_gold")]
+    originals = [args.annotator_a or folder / "annotator_a.jsonl",
+                 args.annotator_b or folder / "annotator_b.jsonl", folder / "final_gold.jsonl"]
+    files = args.files or originals
     for path in files:
         validate_file(path, cases, manifest, environment, root)
         print(f"Valid: {path.name} ({len(cases)} cases)")
     if args.check_adjudication:
-        a, b, final = [validate_file(folder / f"{name}.jsonl", cases, manifest, environment, root)
-                       for name in ("annotator_a", "annotator_b", "final_gold")]
+        a, b, final = [validate_file(path, cases, manifest, environment, root) for path in originals]
         rows = validate_adjudication(folder / "adjudication.jsonl", a, b, final)
-        print(f"Valid adjudication: {len(rows)} disputes; original A/B preserved")
+        disputed = sum(comparable(a[id_]) != comparable(b[id_]) for id_ in a)
+        print(f"Valid adjudication: {disputed} disputes, {len(rows) - disputed} agreed-case corrections; original A/B preserved")
 
 
 if __name__ == "__main__":

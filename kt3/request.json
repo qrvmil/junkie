@@ -1,13 +1,15 @@
 {
-  "id": "full-01",
+  "id": "full-02",
   "mode": "full",
   "model": "google/gemini-3.5-flash-lite",
   "ingestion_timeout_s": 120,
   "repeat": 1,
   "judge_control_budget_usd": 0,
   "runs": [
-    {"variant": "B0", "budget_usd": 0.20, "max_calls": 60},
-    {"variant": "B1", "budget_usd": 0.20, "max_calls": 60},
-    {"variant": "Junkie", "budget_usd": 2.00, "max_calls": 300}
+    {
+      "variant": "Junkie",
+      "budget_usd": 1.5,
+      "max_calls": 320
+    }
   ]
 }

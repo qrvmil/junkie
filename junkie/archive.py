@@ -7,6 +7,7 @@ import math
 from pathlib import Path
 import re
 import time
+import unicodedata
 
 from eval.ingestion.source_text import units
 from .rules import metadata_from_text, tokenize
@@ -15,6 +16,11 @@ SUPPORTED = {"txt", "md", "tex", "pdf", "docx", "pptx", "html"}
 MAX_BYTES = 25 * 1024 * 1024
 SOURCE_FIELDS = {"doc_id", "path", "owner_id", "uploaded_at", "source_type", "sha256"}
 _TEXT_CACHE = {}
+_FILENAME_TOKEN = re.compile(
+    r'(?<![\w./-])(?:["«“](?P<quoted>[^"\n»”]+\.(?:pdf|docx|pptx|txt|md|tex|html))["»”]'
+    r'|(?P<plain>[\w][\w.+-]*\.(?:pdf|docx|pptx|txt|md|tex|html)))(?!\w|\.\w)',
+    re.IGNORECASE,
+)
 
 
 class ToolError(Exception):
@@ -84,6 +90,63 @@ def _matches(record, filters):
     return True
 
 
+def _filename_key(value):
+    return unicodedata.normalize("NFKC", re.sub(r"^\d{3}_", "", value)).casefold().replace("ё", "е")
+
+
+def _edit_distance(left, right, maximum=2):
+    """Bounded edit distance; an adjacent transposition counts as one typo."""
+    if abs(len(left) - len(right)) > maximum:
+        return maximum + 1
+    previous = list(range(len(right) + 1))
+    before_previous = None
+    for i, char in enumerate(left, 1):
+        current = [i] + [maximum + 1] * len(right)
+        for j in range(max(1, i - maximum), min(len(right), i + maximum) + 1):
+            current[j] = min(previous[j] + 1, current[j - 1] + 1,
+                             previous[j - 1] + (char != right[j - 1]))
+            if (before_previous is not None and j > 1
+                    and char == right[j - 2] and left[i - 2] == right[j - 1]):
+                current[j] = min(current[j], before_previous[j - 2] + 1)
+        if min(current) > maximum:
+            return maximum + 1
+        before_previous, previous = previous, current
+    return previous[-1]
+
+
+def _filename_candidates(query, candidates):
+    """None means no filename intent; [] means an unsafe/absent filename match."""
+    names = {_filename_key(match.group("quoted") or match.group("plain"))
+             for match in _FILENAME_TOKEN.finditer(query)}
+    if not names:
+        return None
+    if len(names) != 1:
+        return []
+    wanted = names.pop()
+    if len(wanted) > 128:
+        return []
+    wanted_path = Path(wanted)
+    scored = {}
+    for record in candidates:
+        name = _filename_key(Path(record["path"]).name)
+        candidate_path = Path(name)
+        if len(name) > 128 or candidate_path.suffix != wanted_path.suffix:
+            continue
+        distance = _edit_distance(wanted_path.stem, candidate_path.stem)
+        similarity = 1 - distance / max(len(wanted_path.stem), len(candidate_path.stem), 1)
+        if distance > 2 or similarity < .8:
+            continue
+        scored.setdefault(name, {"similarity": similarity, "records": []})["records"].append(record)
+    ranked = sorted(scored.values(), key=lambda item: item["similarity"], reverse=True)
+    if not ranked:
+        return []
+    # Exact names are reliable; approximate matches need a clear margin.
+    if (ranked[0]["similarity"] < 1 and len(ranked) > 1
+            and ranked[0]["similarity"] - ranked[1]["similarity"] < .05):
+        return []
+    return ranked[0]["records"]
+
+
 class Archive:
     def __init__(self, root):
         self.root = Path(root).resolve()
@@ -139,10 +202,10 @@ class Archive:
                 "snippet": text[start:start + 280], "source": "saved://" + record["doc_id"],
                 "uploaded_at": record["uploaded_at"]}
 
-    def search(self, query, filters, order_by, limit, user_id, ranking="bm25"):
+    def search(self, query, filters, order_by, limit, user_id, ranking="bm25", fuzzy_filename=False):
         self.last_read_doc_ids = []
         if (not isinstance(query, str) or not isinstance(filters, dict) or type(limit) is not int
-                or not 1 <= limit <= 5 or ranking not in {"bm25", "overlap"}
+                or not 1 <= limit <= 5 or ranking not in {"bm25", "overlap"} or type(fuzzy_filename) is not bool
                 or order_by not in {"relevance", "uploaded_at_asc", "uploaded_at_desc"}):
             raise ToolError("invalid_arguments")
         allowed = {"format", "source_type", "doc_type", "filename", "uploaded_at", "content_date"}
@@ -176,12 +239,16 @@ class Archive:
             self.last_read_doc_ids.append(record["doc_id"])
             if _matches(record, filters):
                 candidates.append(record)
+        filename_candidates = (_filename_candidates(query, candidates)
+                               if fuzzy_filename and "filename" not in filters else None)
+        if filename_candidates is not None:
+            candidates = filename_candidates
         query_terms = set(tokenize(query))
         avgdl = sum(record["length"] for record in owned) / len(owned) if owned else 1
         frequencies = {term: sum(term in record["terms"] for record in owned) for term in query_terms}
         scored = []
         for record in candidates:
-            if not query_terms:
+            if filename_candidates is not None or not query_terms:
                 score = 1
             elif ranking == "overlap":
                 score = sum(record["terms"][term] for term in query_terms)

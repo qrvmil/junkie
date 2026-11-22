@@ -58,7 +58,7 @@ class ServiceTests(unittest.TestCase):
         self.assertTrue(good["observations"]["source_checks"][0]["snippet_supported"])
         bad = self.query(service, "открой b")
         self.assertEqual(bad["action"], "refuse")
-        self.assertEqual(bad["trace"]["calls"][0]["read_doc_ids"], [])
+        self.assertEqual(bad["trace"]["calls"], [])
         self.assertNotIn("SECRET_PRIVATE_CONTENT", json.dumps(bad))
 
     def test_source_observation_checks_the_actual_source(self):
@@ -92,7 +92,7 @@ class ServiceTests(unittest.TestCase):
             {"action": "search", "query": "apple", "filters": {}, "open_first": True}]),
             fault={"tool": "get_document", "occurrence": 1, "error_code": "unavailable",
                    "after_successful_tool": "search_documents"})
-        direct = self.query(service)
+        direct = self.query(service, context=[{"role":"assistant","result_doc_ids":["a"]}])
         self.assertEqual([c["status"] for c in direct["trace"]["calls"]], ["ok"])
         searched = self.query(service)
         self.assertEqual([(c["name"], c["status"]) for c in searched["trace"]["calls"]],
@@ -103,7 +103,31 @@ class ServiceTests(unittest.TestCase):
             {"action": "search", "query": "x", "filters": {"owner_id": "other"}}]))
         output = self.query(service)
         self.assertEqual(output["status"], "error")
+        self.assertEqual(output["trace"]["model_steps"][0]["invalid_field"], "filters.owner_id")
         self.assertEqual(output["trace"]["calls"], [])
+
+    def test_ambiguous_open_only_uses_allowed_candidates(self):
+        (self.root / "apple-v2.txt").write_text("apple revised recipe")
+        self.archive.ingest({"path":"apple-v2.txt"}, "u", "2026-10-24", doc_id="v2")
+        plan = {"action":"search","query":"apple","filters":{},"open_first":True}
+        for answer, status in [({"action":"clarify","question":"Какая версия рецепта нужна?"}, "ok"),
+                               ({"action":"open","doc_id":"b"}, "error")]:
+            client = FakeClient([plan, answer])
+            result = self.query(Service(self.archive, "Junkie", client), "открой рецепт")
+            self.assertEqual(result["status"], status)
+            self.assertEqual([c["name"] for c in result["trace"]["calls"]], ["search_documents"])
+            self.assertEqual(result["result_doc_ids"], [])
+            self.assertNotIn("private.txt", client.messages[1][1]["content"])
+            if status == "ok":
+                self.assertEqual(result["action"], "clarify")
+
+    def test_filename_retry_is_visible_in_trace(self):
+        (self.root / "pineapple.txt").write_text("tropical fruit")
+        self.archive.ingest({"path":"pineapple.txt"}, "u", "2026-10-24", doc_id="fruit")
+        client = FakeClient([{"action":"search","query":"","filters":{"filename":"pineaple.txt"}}])
+        result = self.query(Service(self.archive, "Junkie", client), "найди pineaple.txt")
+        self.assertEqual(result["result_doc_ids"], ["fruit"])
+        self.assertTrue(result["trace"]["calls"][1]["filename_fallback"])
 
     def test_invalid_ingestion_gated_before_model(self):
         client = FakeClient([])
@@ -137,7 +161,7 @@ class ServiceTests(unittest.TestCase):
         service = Service(self.archive, "Junkie", FakeClient([
             {"action": "get_document", "doc_id": "a"}]), tool_timeout_s=.01)
         with patch.object(self.archive, "get_document", side_effect=lambda *args: time.sleep(.05)):
-            result = self.query(service)
+            result = self.query(service, context=[{"role":"assistant","result_doc_ids":["a"]}])
         self.assertEqual(result["error_code"], "unavailable")
         self.assertTrue(all(c["error_code"] == "unavailable" and c["failure_reason"] == "timeout"
                             for c in result["trace"]["calls"]))

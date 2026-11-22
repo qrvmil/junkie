@@ -2,6 +2,7 @@
 from copy import deepcopy
 from contextlib import contextmanager
 from datetime import date
+import hashlib
 import json
 import math
 from pathlib import Path
@@ -16,6 +17,9 @@ from .rules import parse_query
 PROMPTS = Path(__file__).with_name("prompts")
 QUERY_PROMPT = (PROMPTS / "query.txt").read_text(encoding="utf-8")
 METADATA_PROMPT = (PROMPTS / "metadata.txt").read_text(encoding="utf-8")
+
+
+CHOOSE_PROMPT = (PROMPTS / "choose.txt").read_text(encoding="utf-8")
 
 
 class StepBudget(Exception):
@@ -99,6 +103,7 @@ class Service:
         self.model_calls = 0
         self.termination_reason = "completed"
         self._fault_occurrences = 0
+        self.model_steps = []
 
     def _model(self, messages, max_tokens, purpose):
         if self.client is None:
@@ -106,7 +111,21 @@ class Service:
         if self.model_calls >= self.max_model_calls:
             raise ModelError("model_call_budget_exhausted")
         self.model_calls += 1
-        return self.client.complete_json(messages, max_tokens=max_tokens, purpose=purpose)
+        if purpose not in {"query", "choose"}:
+            return self.client.complete_json(messages, max_tokens=max_tokens, purpose=purpose)
+        step = {"purpose": purpose, "prompt_sha256": hashlib.sha256(messages[0]["content"].encode()).hexdigest(),
+                "input": json.loads(messages[-1]["content"])}
+        self.model_steps.append(step)
+        try:
+            step["output"] = self.client.complete_json(messages, max_tokens=max_tokens, purpose=purpose)
+            return step["output"]
+        except ModelError as exc:
+            step["error"] = exc.code
+            raise
+
+    def _invalid(self, field):
+        self.model_steps[-1]["invalid_field"] = field
+        raise ModelError("invalid_query_plan")
 
     def _fault_code(self, name):
         if self.fault.get("tool") != name:
@@ -120,12 +139,14 @@ class Service:
             return self.fault.get("error_code", "unavailable")
         return None
 
-    def _call(self, name, arguments, user_id):
+    def _call(self, name, arguments, user_id, *, fuzzy_filename=False):
         for attempt in range(3):
             if len(self.tool_calls) >= self.max_tool_calls:
                 raise StepBudget()
             started = time.perf_counter()
             call = {"name": name, "arguments": deepcopy(arguments), "status": "error", "read_doc_ids": []}
+            if fuzzy_filename:
+                call["filename_fallback"] = True
             self.tool_calls.append(call)
             try:
                 injected = self._fault_code(name)
@@ -134,7 +155,7 @@ class Service:
                 with deadline(self.tool_timeout_s, self.archive):
                     if name == "search_documents":
                         result = self.archive.search(**arguments, user_id=user_id,
-                                                     ranking="overlap" if self.variant == "B0" else "bm25")
+                                                     fuzzy_filename=fuzzy_filename, ranking="overlap" if self.variant == "B0" else "bm25")
                     elif name == "get_document":
                         result = self.archive.get_document(arguments["doc_id"], user_id)
                     else:
@@ -181,17 +202,28 @@ class Service:
         value = self._model([{"role": "system", "content": QUERY_PROMPT},
                              {"role": "user", "content": json.dumps(payload, ensure_ascii=False)}], 900, "query")
         action = value.get("action")
-        if action not in {"search", "clarify", "refuse", "get_document"}:
-            raise ModelError("invalid_query_plan")
+        if action not in ("search", "clarify", "refuse", "get_document"):
+            self._invalid("action")
         if action == "search":
-            if (not isinstance(value.get("query"), str) or not valid_filters(value.get("filters", {}))
-                    or value.get("order_by", "relevance") not in {"relevance", "uploaded_at_asc", "uploaded_at_desc"}
-                    or ("open_first" in value and type(value["open_first"]) is not bool)):
-                raise ModelError("invalid_query_plan")
-        if action == "get_document" and (not isinstance(value.get("doc_id"), str) or not value["doc_id"].strip()):
-            raise ModelError("invalid_query_plan")
+            if not isinstance(value.get("query"), str):
+                self._invalid("query")
+            filters = value.get("filters", {})
+            if not valid_filters(filters):
+                bad = next((key for key in filters if not valid_filters({key: filters[key]})), None) if isinstance(filters, dict) else None
+                self._invalid("filters." + bad if bad else "filters")
+            if value.get("order_by", "relevance") not in ("relevance", "uploaded_at_asc", "uploaded_at_desc"):
+                self._invalid("order_by")
+            if "open_first" in value and type(value["open_first"]) is not bool:
+                self._invalid("open_first")
+        if action == "get_document":
+            if not isinstance(value.get("doc_id"), str) or not value["doc_id"].strip():
+                self._invalid("doc_id")
+            if not any(value["doc_id"] in turn.get("result_doc_ids", [])
+                       for turn in selected if turn["role"] == "assistant"):
+                self.model_steps[-1]["invalid_field"] = "doc_id:not_in_history"
+                return {"action": "refuse"}, truncated
         if action == "clarify" and (not isinstance(value.get("question"), str) or not value["question"].strip()):
-            raise ModelError("invalid_query_plan")
+            self._invalid("question")
         return value, truncated
 
     def _observations(self, cards, user_id):
@@ -214,12 +246,15 @@ class Service:
 
     def _finish(self, result, started, tool_start, model_start):
         result["trace"] = {"complete": True, "calls": deepcopy(self.tool_calls[tool_start:])}
+        if self.model_steps:
+            result["trace"]["model_steps"] = deepcopy(self.model_steps)
         result["llm_usage"] = {"complete": True,
                                "calls": deepcopy(self.client.calls[model_start:]) if self.client else []}
         result["elapsed_ms"] = (time.perf_counter() - started) * 1000
         return result
 
     def query(self, query, user_id, now, timezone, context=None):
+        self.model_steps = []
         started, tool_start = time.perf_counter(), len(self.tool_calls)
         model_start = len(self.client.calls) if self.client else 0
         self.termination_reason = "completed"
@@ -242,8 +277,32 @@ class Service:
                     result["parsed_query"] = {"filters": arguments["filters"], "order_by": arguments["order_by"]}
                     found = self._call("search_documents", arguments, user_id)
                     cards, has_more = found["results"], found["has_more"]
+                    if self.variant == "Junkie" and not cards and arguments["filters"].get("filename"):
+                        retry = deepcopy(arguments)
+                        filename = retry["filters"].pop("filename")
+                        if Path(filename).suffix.lower() in {".pdf", ".docx", ".pptx", ".txt", ".md", ".html", ".tex"} and not any(c in filename for c in '/"\n'):
+                            retry["query"] = '"' + filename + '"'
+                            found = self._call("search_documents", retry, user_id, fuzzy_filename=True)
+                            cards, has_more = found["results"], found["has_more"]
                     if plan.get("open_first") and cards:
-                        opened = self._call("get_document", {"doc_id": cards[0]["doc_id"]}, user_id)
+                        chosen_id = cards[0]["doc_id"]
+                        if self.variant == "Junkie" and len(cards) > 1:
+                            choices = [{"doc_id": c["doc_id"], "title": c["title"][:180],
+                                        "filename": Path(self.archive.documents[c["doc_id"]]["path"]).name}
+                                       for c in cards]
+                            decision = self._model([{"role":"system","content":CHOOSE_PROMPT},
+                                {"role":"user","content":json.dumps({"query":query[:8000], "search_terms":arguments["query"],
+                                 "candidates":choices}, ensure_ascii=False)}], 300, "choose")
+                            if decision.get("action") == "clarify" and isinstance(decision.get("question"), str) and decision["question"].strip():
+                                result.update(action="clarify", response=decision["question"])
+                                return self._finish(result, started, tool_start, model_start)
+                            if decision.get("action") == "no_result":
+                                result.update(action="no_result", response="Подходящий документ не найден.")
+                                return self._finish(result, started, tool_start, model_start)
+                            chosen_id = decision.get("doc_id")
+                            if decision.get("action") != "open" or chosen_id not in [c["doc_id"] for c in cards]:
+                                self._invalid("choose.action_or_doc_id")
+                        opened = self._call("get_document", {"doc_id": chosen_id}, user_id)
                         cards, has_more = [opened["result"]], False
                 result.update(result_doc_ids=[c["doc_id"] for c in cards], results=cards,
                               has_more=has_more, observations=self._observations(cards, user_id))
@@ -270,6 +329,7 @@ class Service:
         return self._finish(result, started, tool_start, model_start)
 
     def ingest(self, input, user_id, now, doc_id=None):
+        self.model_steps = []
         started, tool_start = time.perf_counter(), len(self.tool_calls)
         model_start = len(self.client.calls) if self.client else 0
         self.termination_reason = "completed"

@@ -107,6 +107,59 @@ class ArchiveTests(unittest.TestCase):
         self.assertEqual(len(result["results"]), 5)
         self.assertTrue(result["has_more"])
 
+    def test_filename_typo_fallback_is_opt_in_and_keeps_exact_filter(self):
+        archive = build_archive(self.root, [self.source("wanted", "annual data", path="annualsummary.txt"),
+                                            self.source("other", "unrelated data", path="inventory.txt")])
+        query = "annualsumary.txt"
+        for ranking in ("overlap", "bm25"):
+            before = archive.search(query, {}, "relevance", 5, "a", ranking=ranking)
+            self.assertEqual(len(before["results"]), 2)  # Both filenames contain the token 'txt'.
+            self.assertEqual(before, archive.search(query, {}, "relevance", 5, "a",
+                                                     ranking=ranking, fuzzy_filename=False))
+        found = archive.search(query, {}, "relevance", 5, "a", fuzzy_filename=True)
+        self.assertEqual([row["doc_id"] for row in found["results"]], ["wanted"])
+        exact = archive.search(query, {"filename": query}, "relevance", 5, "a", fuzzy_filename=True)
+        self.assertEqual(exact["results"], [])
+
+    def test_filename_fallback_handles_transposition_and_quoted_spaces(self):
+        archive = build_archive(self.root, [self.source("wanted", "data", path="014_Annual report.txt")])
+        found = archive.search('Открой "Annual reprot.txt".', {}, "relevance", 5, "a", fuzzy_filename=True)
+        self.assertEqual([row["doc_id"] for row in found["results"]], ["wanted"])
+
+    def test_filename_fallback_rejects_ambiguity_and_low_confidence(self):
+        archive = build_archive(self.root, [self.source("one", "data", path="projectalpha.txt"),
+                                            self.source("two", "data", path="projectalphi.txt")])
+        for query in ("projectalpho.txt", "differentdocument.txt", "projectalpha.txt projectalphi.txt"):
+            self.assertEqual(archive.search(query, {}, "relevance", 5, "a", fuzzy_filename=True)["results"], [])
+        exact = archive.search("projectalpha.txt", {}, "relevance", 5, "a", fuzzy_filename=True)
+        self.assertEqual([row["doc_id"] for row in exact["results"]], ["one"])
+        short = build_archive(self.root, [self.source("short", "data", path="cat.txt")])
+        self.assertEqual(short.search("cot.txt", {}, "relevance", 5, "a", fuzzy_filename=True)["results"], [])
+
+    def test_filename_fallback_preserves_extension_and_filters(self):
+        archive = build_archive(self.root, [self.source("txt", "data", path="annualsummary.txt"),
+                                            self.source("md", "data", path="annualsumary.md")])
+        query = "annualsumary.txt"
+        found = archive.search(query, {}, "relevance", 5, "a", fuzzy_filename=True)
+        self.assertEqual([row["doc_id"] for row in found["results"]], ["txt"])
+        for filters in ({"format": "md"}, {"source_type": "url"},
+                        {"uploaded_at": {"gte": "2026-11-01"}}, {"doc_type": "exam"}):
+            self.assertEqual(archive.search(query, filters, "relevance", 5, "a", fuzzy_filename=True)["results"], [])
+
+    def test_filename_fallback_does_not_read_or_use_foreign_names(self):
+        archive = build_archive(self.root, [self.source("own", "data", path="annualsummary.txt"),
+                                            self.source("foreign", "secret", owner="b", path="annualsumary.txt")])
+        found = archive.search("annualsumary.txt", {}, "relevance", 5, "a", fuzzy_filename=True)
+        self.assertEqual(found["read_doc_ids"], ["own"])
+        self.assertEqual([row["doc_id"] for row in found["results"]], ["own"])
+
+    def test_filename_fallback_leaves_normal_queries_unchanged_and_bounds_names(self):
+        archive = build_archive(self.root, [self.source("one", "needle data", path="report.txt")])
+        normal = archive.search("needle", {}, "relevance", 5, "a")
+        self.assertEqual(normal, archive.search("needle", {}, "relevance", 5, "a", fuzzy_filename=True))
+        self.assertEqual(archive.search("x" * 200 + ".txt", {}, "relevance", 5, "a",
+                                        fuzzy_filename=True)["results"], [])
+
     def test_reject_invalid_input_before_parser(self):
         archive = Archive(self.root)
         for value, reason in [({"path": "image.png"}, "unsupported_format"),

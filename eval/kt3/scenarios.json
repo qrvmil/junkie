@@ -1,12 +1,13 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "budget_unit": "tool_call",
   "state": "fresh scenario; reuse actual prior turns inside scenario",
   "notes": [
     "Gold assertions are visible to the evaluator only. The system receives user/input fields and runner state.",
     "Faults are injected at the tool boundary; attempts and errors remain in the trace.",
     "Overflow wording and clarification usefulness are evaluated by the LLM judge on the dev set; these scenarios check sequence and final goal.",
-    "These are scenario definitions, not measured runs."
+    "These are scenario definitions, not measured runs.",
+    "S03 permits search or direct opening of miniaudio if that document was returned in the actual first turn."
   ],
   "scenarios": [
     {
@@ -125,10 +126,19 @@
             "results_exact_set": [
               "doc_076"
             ],
-            "required_call": {
-              "tool": "search_documents",
-              "arguments_subset": {}
-            }
+            "required_call_any": [
+              {
+                "tool": "search_documents",
+                "arguments_subset": {}
+              },
+              {
+                "tool": "get_document",
+                "arguments_subset": {
+                  "doc_id": "doc_076"
+                },
+                "document_from_turn": 1
+              }
+            ]
           }
         }
       ],

@@ -153,6 +153,36 @@ class ScenarioTests(unittest.TestCase):
         wrong = step(["doc_020"], [call("get_document", {"doc_id": "doc_020"}, ["doc_020"])])
         self.assertEqual(self.check("S01", [first, wrong])["checks"]["ScenarioSuccess"]["value"], 0)
 
+    def test_narrowing_can_search_or_open_a_known_result(self):
+        first = step(["doc_074", "doc_075", "doc_076", "doc_077", "doc_078"], [call()])
+        alternatives = [
+            step(["doc_076"], [call(ids=["doc_076"])]),
+            step(["doc_076"], [call("get_document", {"doc_id": "doc_076"}, ["doc_076"])]),
+        ]
+        for second in alternatives:
+            row = self.check("S03", [first, second])
+            self.assertEqual(row["checks"]["ScenarioSuccess"]["value"], 1)
+
+    def test_narrowing_direct_open_requires_actual_previous_result_and_read(self):
+        first = step(["doc_074", "doc_075", "doc_076", "doc_077", "doc_078"], [call()])
+        opened = step(["doc_076"], [call("get_document", {"doc_id": "doc_076"}, ["doc_076"])])
+        without_target = step(["doc_074", "doc_075", "doc_079", "doc_077", "doc_078"], [call()])
+        self.assertEqual(self.check("S03", [without_target, opened])["checks"]["ScenarioSuccess"]["value"], 0)
+        no_read = step(["doc_076"], [call("get_document", {"doc_id": "doc_076"})])
+        self.assertEqual(self.check("S03", [first, no_read])["checks"]["ScenarioSuccess"]["value"], 0)
+        failed = step(["doc_076"], [call("get_document", {"doc_id": "doc_076"}, ["doc_076"], status="error")])
+        self.assertEqual(self.check("S03", [first, failed])["checks"]["ScenarioSuccess"]["value"], 0)
+        opened["trace"]["complete"] = False
+        self.assertEqual(self.check("S03", [first, opened])["checks"]["ScenarioSuccess"]["status"], "pending")
+
+    def test_alternative_does_not_relax_other_scenarios(self):
+        first = step(["doc_019", "doc_020", "doc_021"], [call()])
+        second = step(["doc_020"], [call("get_document", {"doc_id": "doc_020"}, ["doc_020"])])
+        self.assertEqual(self.check("S01", [first, second])["checks"]["ScenarioSuccess"]["value"], 0)
+        first = step(["doc_019"], [call()])
+        second = step(["doc_020"], [call()])
+        self.assertEqual(self.check("S02", [first, second])["checks"]["ScenarioSuccess"]["value"], 0)
+
     def test_missing_trace_remains_pending(self):
         first = step([], action="clarify")
         second = step(["doc_020"])

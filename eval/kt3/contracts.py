@@ -250,6 +250,22 @@ def _combine(checks):
     return cell(1)
 
 
+def scenario_call_matches(required, actual, steps, number, ids):
+    if not call_matches(required, actual):
+        return False
+    if "document_from_turn" not in required:
+        return True
+    source_turn = required["document_from_turn"]
+    doc_id = actual.get("arguments", {}).get("doc_id")
+    if (type(source_turn) is not int or not 1 <= source_turn <= number
+            or actual.get("name") != "get_document" or not isinstance(doc_id, str)
+            or ids != [doc_id] or doc_id not in actual.get("read_doc_ids", [])):
+        return False
+    previous = steps[source_turn - 1]
+    action, previous_ids = outcome(previous)
+    return action == "search" and doc_id in previous_ids
+
+
 def score_scenarios(specs, outputs):
     """Score runner-produced turns against specs; never accept a success flag."""
     if isinstance(specs, dict):
@@ -311,6 +327,9 @@ def score_scenarios(specs, outputs):
                 good = good and subset(expected["fields"], step)
             if "required_call" in expected and observed:
                 good = good and any(call_matches(expected["required_call"], c) for c in calls)
+            if "required_call_any" in expected and observed:
+                good = good and any(scenario_call_matches(required, c, steps, number, ids)
+                                    for required in expected["required_call_any"] for c in calls)
             for field in expected.get("observations_true", []):
                 observations = step.get("observations")
                 observed_value = observations.get(field) if isinstance(observations, dict) else None

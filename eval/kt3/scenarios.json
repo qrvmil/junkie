@@ -1,0 +1,366 @@
+{
+  "schema_version": 1,
+  "budget_unit": "tool_call",
+  "state": "fresh scenario; reuse actual prior turns inside scenario",
+  "notes": [
+    "Gold assertions are visible to the evaluator only. The system receives user/input fields and runner state.",
+    "Faults are injected at the tool boundary; attempts and errors remain in the trace.",
+    "Overflow wording and clarification usefulness are evaluated by the LLM judge on the dev set; these scenarios check sequence and final goal.",
+    "These are scenario definitions, not measured runs."
+  ],
+  "scenarios": [
+    {
+      "id": "S01",
+      "title": "Открытие второго результата",
+      "user_id": "user_a",
+      "fixture_id": "base",
+      "now": "2026-10-24T12:00:00+03:00",
+      "timezone": "Europe/Moscow",
+      "max_steps": 8,
+      "termination_reasons": [
+        "completed"
+      ],
+      "turns": [
+        {
+          "user": "Найди экзамены ML1 за 2025 и 2026 годы",
+          "assert": {
+            "action": "search",
+            "results_exact_set": [
+              "doc_019",
+              "doc_020"
+            ],
+            "required_call": {
+              "tool": "search_documents",
+              "arguments_subset": {}
+            }
+          }
+        },
+        {
+          "user": "Открой второй",
+          "assert": {
+            "action": "search",
+            "selected_from_turn": {
+              "turn": 1,
+              "position": 2
+            },
+            "result_count": 1
+          }
+        }
+      ],
+      "dialogue": true
+    },
+    {
+      "id": "S02",
+      "title": "Уточнение версии экзамена",
+      "user_id": "user_a",
+      "fixture_id": "base",
+      "now": "2026-10-24T12:00:00+03:00",
+      "timezone": "Europe/Moscow",
+      "max_steps": 8,
+      "termination_reasons": [
+        "completed"
+      ],
+      "turns": [
+        {
+          "user": "Открой вариант 1 по ML1",
+          "assert": {
+            "action": "clarify",
+            "result_count": 0,
+            "response_nonempty": true
+          }
+        },
+        {
+          "user": "Нужен экзамен за 2026 год",
+          "assert": {
+            "action": "search",
+            "results_exact_set": [
+              "doc_020"
+            ],
+            "required_call": {
+              "tool": "search_documents",
+              "arguments_subset": {}
+            }
+          }
+        }
+      ],
+      "dialogue": true
+    },
+    {
+      "id": "S03",
+      "title": "Сужение большой выдачи",
+      "user_id": "user_a",
+      "fixture_id": "base",
+      "now": "2026-10-24T12:00:00+03:00",
+      "timezone": "Europe/Moscow",
+      "max_steps": 8,
+      "termination_reasons": [
+        "completed"
+      ],
+      "turns": [
+        {
+          "user": "Покажи все сохранённые ссылки",
+          "assert": {
+            "action": "search",
+            "results_allowed": [
+              "doc_074",
+              "doc_075",
+              "doc_076",
+              "doc_077",
+              "doc_078",
+              "doc_079",
+              "doc_080",
+              "doc_081"
+            ],
+            "result_count": 5,
+            "required_call": {
+              "tool": "search_documents",
+              "arguments_subset": {}
+            }
+          }
+        },
+        {
+          "user": "Из них нужна документация miniaudio",
+          "assert": {
+            "action": "search",
+            "results_exact_set": [
+              "doc_076"
+            ],
+            "required_call": {
+              "tool": "search_documents",
+              "arguments_subset": {}
+            }
+          }
+        }
+      ],
+      "dialogue": true
+    },
+    {
+      "id": "S04",
+      "title": "Исправление формата",
+      "user_id": "user_a",
+      "fixture_id": "base",
+      "now": "2026-10-24T12:00:00+03:00",
+      "timezone": "Europe/Moscow",
+      "max_steps": 8,
+      "termination_reasons": [
+        "completed"
+      ],
+      "turns": [
+        {
+          "user": "Покажи мои PDF-файлы",
+          "assert": {
+            "action": "search",
+            "results_allowed": [
+              "doc_002",
+              "doc_003",
+              "doc_004",
+              "doc_005",
+              "doc_009",
+              "doc_010",
+              "doc_011",
+              "doc_012",
+              "doc_013",
+              "doc_014",
+              "doc_015",
+              "doc_016",
+              "doc_017",
+              "doc_018",
+              "doc_019",
+              "doc_020",
+              "doc_021",
+              "doc_022",
+              "doc_023",
+              "doc_024",
+              "doc_025",
+              "doc_026",
+              "doc_029",
+              "doc_030",
+              "doc_031",
+              "doc_032",
+              "doc_033",
+              "doc_034",
+              "doc_035",
+              "doc_047",
+              "doc_056",
+              "doc_057",
+              "doc_058",
+              "doc_059",
+              "doc_061",
+              "doc_062",
+              "doc_069",
+              "doc_075",
+              "doc_088"
+            ],
+            "result_count": 5,
+            "required_call": {
+              "tool": "search_documents",
+              "arguments_subset": {
+                "filters": {
+                  "format": "pdf"
+                }
+              }
+            }
+          }
+        },
+        {
+          "user": "Нет, нужны DOCX, а не PDF",
+          "assert": {
+            "action": "search",
+            "results_allowed": [
+              "doc_006",
+              "doc_007",
+              "doc_008",
+              "doc_041",
+              "doc_042",
+              "doc_043",
+              "doc_044",
+              "doc_048",
+              "doc_060"
+            ],
+            "result_count": 5,
+            "required_call": {
+              "tool": "search_documents",
+              "arguments_subset": {
+                "filters": {
+                  "format": "docx"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "dialogue": true
+    },
+    {
+      "id": "S05",
+      "title": "Ошибка открытия после успешного поиска",
+      "user_id": "user_a",
+      "fixture_id": "base",
+      "now": "2026-10-24T12:00:00+03:00",
+      "timezone": "Europe/Moscow",
+      "max_steps": 8,
+      "termination_reasons": [
+        "completed"
+      ],
+      "turns": [
+        {
+          "user": "Найди apple.txt и открой его",
+          "assert": {
+            "action": "search",
+            "results_exact_set": [
+              "doc_001"
+            ],
+            "required_call": {
+              "tool": "get_document",
+              "arguments_subset": {
+                "doc_id": "doc_001"
+              }
+            }
+          }
+        }
+      ],
+      "fault": {
+        "tool": "get_document",
+        "occurrence": 1,
+        "error_code": "unavailable",
+        "after_successful_tool": "search_documents",
+        "then": "normal"
+      }
+    },
+    {
+      "id": "S06",
+      "title": "Исчерпание бюджета шагов",
+      "user_id": "user_a",
+      "fixture_id": "base",
+      "now": "2026-10-24T12:00:00+03:00",
+      "timezone": "Europe/Moscow",
+      "max_steps": 3,
+      "termination_reasons": [
+        "budget_exhausted"
+      ],
+      "turns": [
+        {
+          "user": "Найди apple.txt",
+          "assert": {
+            "action": "refuse",
+            "result_count": 0,
+            "response_nonempty": true,
+            "fields": {
+              "reason": "step_budget_exhausted"
+            }
+          }
+        }
+      ],
+      "exhaust_budget": true,
+      "persistent_fault": {
+        "tool": "search_documents",
+        "error_code": "unavailable"
+      }
+    },
+    {
+      "id": "S07",
+      "title": "Добавление, поиск и открытие",
+      "user_id": "user_a",
+      "fixture_id": "base",
+      "now": "2026-10-24T12:00:00+03:00",
+      "timezone": "Europe/Moscow",
+      "max_steps": 8,
+      "termination_reasons": [
+        "completed"
+      ],
+      "turns": [
+        {
+          "input": {
+            "path": "corpus/apple.txt",
+            "source_type": "file",
+            "assigned_doc_id": "doc_001"
+          },
+          "assert": {
+            "action": "ingest",
+            "result_count": 0,
+            "fields": {
+              "document_id": "doc_001"
+            },
+            "text_extracted": true,
+            "observations_true": [
+              "source_saved",
+              "source_openable",
+              "searchable"
+            ]
+          }
+        },
+        {
+          "user": "Найди apple.txt",
+          "assert": {
+            "action": "search",
+            "results_exact_set": [
+              "doc_001"
+            ],
+            "required_call": {
+              "tool": "search_documents",
+              "arguments_subset": {}
+            }
+          }
+        },
+        {
+          "user": "Открой найденный файл",
+          "assert": {
+            "action": "search",
+            "selected_from_turn": {
+              "turn": 2,
+              "position": 1
+            },
+            "results_exact_set": [
+              "doc_001"
+            ]
+          }
+        }
+      ],
+      "initial_assert": {
+        "absent_doc_ids": [
+          "doc_001"
+        ]
+      }
+    }
+  ]
+}

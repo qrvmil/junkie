@@ -232,6 +232,7 @@ def manual_review_template(cases, outputs, gold):
             tags = []
         templates.append({
             "id": id_, "kind": "metadata", "output_sha256": output_hash(output),
+            "gold_sha256": output_hash(reference),
             "status": "pending", "reviewer": "", "source": reference["source"],
             "metadata": metadata,
             "fields": {field: {"passed": None, "reason": "", "criteria": reference["metadata"][field]}

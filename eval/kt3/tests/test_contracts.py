@@ -100,6 +100,41 @@ class ContractTests(unittest.TestCase):
         checks = self.check("E133", step(["doc_008"], [call("delete_document", {"doc_id": "doc_008"})]))
         self.assertEqual(checks["ToolArguments"]["value"], 0)
 
+    def test_filter_types_and_date_ranges(self):
+        invalid = [
+            {"format": ["pdf"]}, {"doc_type": " "},
+            {"uploaded_at": {"gte": "2026-02-30"}},
+            {"uploaded_at": {"gte": "2026-10-20", "lt": "2026-10-19"}},
+            {"uploaded_at": {"gte": "2026-10-20", "lt": "2026-10-20"}},
+            {"uploaded_at": {"gte": "2026-10-20", "event": "seminar_date"}},
+            {"content_date": {"event": "seminar_date"}},
+            {"content_date": {"gte": "2026-10-20", "event": []}},
+            {"content_date": {"gte": "20261020"}},
+        ]
+        for filters in invalid:
+            with self.subTest(filters=filters):
+                output = step(["doc_008"], [call(arguments={"query": "exam", "filters": filters, "limit": 5})])
+                self.assertEqual(self.check("E133", output)["ToolArguments"]["value"], 0)
+        valid = {"format": "pdf", "content_date": {"gte": "2026-10-20", "event": "seminar_date"}}
+        output = step(["doc_008"], [call(arguments={"query": "exam", "filters": valid, "limit": 5})])
+        self.assertEqual(self.check("E133", output)["ToolArguments"]["value"], 1)
+
+    def test_typed_errors_and_incomplete_trace(self):
+        for name, code, expected in [
+            ("search_documents", "timeout", 1), ("get_document", "unavailable", 1),
+            ("get_document", "timeout", 0), ("search_documents", "whatever", 0),
+            ("search_documents", None, 0),
+        ]:
+            with self.subTest(name=name, code=code):
+                output = step([], [call(name, status="error", error_code=code)], action="no_result")
+                self.assertEqual(self.check("E133", output)["ToolErrors"]["value"], expected)
+        output = step([])
+        self.assertEqual(self.check("E133", output)["ToolErrors"]["value"], 1)
+        output["trace"]["complete"] = False
+        self.assertEqual(self.check("E133", output)["ToolErrors"]["status"], "pending")
+        output["trace"]["calls"] = [call(status="error")]
+        self.assertEqual(self.check("E133", output)["ToolErrors"]["value"], 0)
+
 
 class ScenarioTests(unittest.TestCase):
     def setUp(self):

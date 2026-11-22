@@ -49,6 +49,36 @@ def call_matches(required, actual):
                 and bool(actual["arguments"]["query"].strip()))))
 
 
+def valid_filters(filters):
+    if not isinstance(filters, dict):
+        return False
+    scalar_fields = {"format", "source_type", "doc_type", "filename"}
+    if not set(filters).issubset(scalar_fields | {"uploaded_at", "content_date"}):
+        return False
+    for field, value in filters.items():
+        if field in scalar_fields:
+            if not isinstance(value, str) or not value.strip():
+                return False
+            continue
+        allowed = {"gte", "lt", "event"} if field == "content_date" else {"gte", "lt"}
+        if (not isinstance(value, dict) or not set(value).issubset(allowed)
+                or not {"gte", "lt"}.intersection(value)):
+            return False
+        if "event" in value and (not isinstance(value["event"], str) or not value["event"].strip()):
+            return False
+        for key in ("gte", "lt"):
+            if key in value:
+                bound = value[key]
+                try:
+                    if not isinstance(bound, str) or date.fromisoformat(bound).isoformat() != bound:
+                        return False
+                except ValueError:
+                    return False
+        if "gte" in value and "lt" in value and value["gte"] >= value["lt"]:
+            return False
+    return True
+
+
 def tool_arguments(calls, complete):
     for call in calls:
         name, args = call.get("name"), call.get("arguments")
@@ -59,15 +89,24 @@ def tool_arguments(calls, complete):
                      and bool(args["doc_id"].strip()))
         elif name == "search_documents":
             valid = (set(args).issubset({"query", "filters", "order_by", "limit"})
-                     and isinstance(args.get("query"), str) and isinstance(args.get("filters"), dict)
-                     and set(args["filters"]).issubset({"format", "source_type", "doc_type", "filename",
-                                                       "uploaded_at", "content_date"})
+                     and isinstance(args.get("query"), str) and valid_filters(args.get("filters"))
                      and type(args.get("limit")) is int and 1 <= args["limit"] <= 5
                      and ("order_by" not in args or isinstance(args["order_by"], str)))
         else:
             valid = False
         if not valid:
             return cell(0, "Unknown tool, invalid arguments, or caller-supplied owner")
+    return cell(1) if complete else pending("Complete tool trace is required")
+
+
+def tool_errors(calls, complete):
+    allowed = {"search_documents": ("timeout", "unavailable", "invalid_arguments"),
+               "get_document": ("not_found_or_forbidden", "unavailable")}
+    for call in calls:
+        if call.get("status") == "error":
+            name = call.get("name")
+            if not isinstance(name, str) or call.get("error_code") not in allowed.get(name, ()):
+                return cell(0, "Missing or undeclared tool error code")
     return cell(1) if complete else pending("Complete tool trace is required")
 
 
@@ -170,7 +209,8 @@ def score_contracts(cases, outputs, documents, environment):
         docs = effective_documents(documents, environment, case.get("fixture_id", "base"))
         calls, complete = calls_from(output)
         checks = {"ArchiveAccess": access_check(case, output, calls, complete, docs),
-                  "ToolArguments": tool_arguments(calls, complete)}
+                  "ToolArguments": tool_arguments(calls, complete),
+                  "ToolErrors": tool_errors(calls, complete)}
         if not known_action:
             checks.update({name: cell(0, "No valid response") for name in (
                 "ResultLimit", "ResultUniqueness", "Sources", "ParsedQuery", "RequiredCalls")})

@@ -11,7 +11,8 @@
 | Тип документа | ConstraintPrecision@5/DocType | 6 search-кейсов | Метаданные корпуса, без угадывания |
 | Дата добавления | ConstraintPrecision@5/AddedDate | 15 search-кейсов | Даты с учётом fixture |
 | Дата события | ConstraintPrecision@5/ContentDate | 3 search-кейса | content_events, вид события и диапазон |
-| Все явные фильтры, включая источник | FilterCompliance, ParsedQuery | Gold filters и фактический разбор | Код; source_type не потерян из-за отсутствия отдельной метрики |
+| Все явные фильтры, включая источник | FilterCompliance | Gold filters и фактическая выдача | Проверка атрибутов выданных документов, включая source_type |
+| Совпадение разбора с эталоном | ParsedQuery | Gold filters/order_by и фактический разбор | Точное совпадение; эквивалентный разбор тоже может получить 0 |
 | Порядок по дате | DateOrderAccuracy@5 | E57, E111 | Сравнимые пары дат |
 | Устойчивость к опечаткам | TypoHitRateDrop и оба HitRate | 11 пар query/clean_query | Отдельные парные запуски |
 | Более пяти совпадений, §2.1 | OverflowHandling, OverflowFullPassRate | 15 кейсов с has_more | Код: документы; LLM: сообщение и предложение сузить |

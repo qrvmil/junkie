@@ -1,5 +1,9 @@
 {
-  "id": "connection-01",
-  "mode": "connection",
-  "generation_budget_usd": 0
+  "id": "smoke-01",
+  "mode": "smoke",
+  "model": "google/gemini-3.5-flash-lite",
+  "ingestion_timeout_s": 120,
+  "repeat": 1,
+  "judge_control_budget_usd": 0.15,
+  "runs": [{"variant": "Junkie", "budget_usd": 0.75, "max_calls": 80}]
 }

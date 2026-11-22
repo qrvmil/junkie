@@ -97,3 +97,5 @@ python -m unittest discover -s tests
 python -m unittest discover -s eval/kt3/tests
 python -m unittest discover -s eval/metrics -p 'test_*.py'
 ```
+
+[Повторный замер Junkie: качество, регрессии и задержка](experiments/02-results.md)

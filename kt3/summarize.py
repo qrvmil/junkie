@@ -22,7 +22,9 @@ def main():
     names = [r["run"]["variant"] for r in reports]
     lines = ["# Результаты КТ3", "", f"[Запуск Actions]({args.workflow_url}).",
              "Значения долей приведены от 0 до 1. `pending` — оценка не завершена,",
-             "`not_applicable` — проверка неприменима. Это один прогон открытого dev-набора.", ""]
+             "`not_applicable` — проверка неприменима. Это один прогон открытого dev-набора.",
+             "Precision@5 всегда делится на 5: один правильный документ даёт 0,2,",
+             "даже если других релевантных документов в задаче нет.", ""]
 
     def table(title, rows):
         lines.extend(["## " + title, "", "| Показатель | " + " | ".join(names) + " |",
@@ -42,7 +44,7 @@ def main():
     table("Время", [(f"{dataset} {p.upper()}, мс", [number(r["latency"][dataset][p]) for r in reports])
                     for dataset in ("search", "ingestion") for p in ("p50", "p95")] +
           [("Подготовка индекса, с", [number(r["preparation"]["elapsed_ms"] / 1000) for r in reports]),
-           ("Весь прогон с оценщиком, с", [number(r.get("run_elapsed_ms", 0) / 1000) for r in reports])])
+           ("Весь прогон с оценщиком, с", [number(r["run_elapsed_ms"] / 1000) if r.get("run_elapsed_ms") is not None else "—" for r in reports])])
     cost_groups = ("search", "clean_queries", "ingestion", "scenarios", "judge")
     table("Расход OpenRouter, USD", [(k, [number(r["cost"].get(k, {}).get("cost_usd")) for r in reports]) for k in cost_groups])
     scenario_ids = sorted({id_ for r in reports for id_, row in r["cases"].items() if row["dataset"] == "scenario"})

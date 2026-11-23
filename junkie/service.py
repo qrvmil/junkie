@@ -182,23 +182,25 @@ class Service:
         if self.variant != "Junkie":
             return {"action": "search", **parse_query(query, now, timezone)}, False
         selected = []
+        truncated = len(query) > 8000
         remaining = 16000
         for turn in reversed((context or [])[-6:]):
             if not isinstance(turn, dict) or turn.get("role") not in {"user", "assistant"}:
                 continue
             content = str(turn.get("content", ""))
-            row = {"role": turn["role"], "content": content[:min(4000, remaining)]}
+            retained_content = content[:min(4000, remaining)]
+            truncated = truncated or len(retained_content) < len(content)
+            row = {"role": turn["role"], "content": retained_content}
             ids = turn.get("result_doc_ids")
             if isinstance(ids, list):
                 row["result_doc_ids"] = [d for d in ids[:5] if isinstance(d, str)]
             selected.append(row)
-            remaining -= len(row["content"])
+            remaining -= len(retained_content)
             if remaining <= 0:
                 break
         selected.reverse()
         payload = {"query": query[:8000], "now": now, "timezone": timezone, "context": selected}
-        truncated = len(query) > 8000 or len(selected) < len(context or []) or any(
-            len(str(t.get("content", ""))) > 4000 for t in (context or []) if isinstance(t, dict))
+        truncated = truncated or len(selected) < len(context or [])
         value = self._model([{"role": "system", "content": QUERY_PROMPT},
                              {"role": "user", "content": json.dumps(payload, ensure_ascii=False)}], 900, "query")
         action = value.get("action")

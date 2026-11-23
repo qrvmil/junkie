@@ -49,6 +49,18 @@ class ServiceTests(unittest.TestCase):
         self.assertEqual(output["llm_usage"]["calls"], [])
         self.assertNotIn("b", output["trace"]["calls"][0]["read_doc_ids"])
 
+    def test_context_truncation_reports_a_partially_kept_turn(self):
+        for oldest_length in (1000, 3000):
+            with self.subTest(oldest_length=oldest_length):
+                context = [{"role": "user", "content": "a" * oldest_length}]
+                context.extend({"role": "assistant", "content": str(index) * 3000} for index in range(1, 6))
+                client = FakeClient([{"action": "clarify", "question": "Which recipe?"}])
+                output = self.query(Service(self.archive, "Junkie", client), context=context)
+
+                model_context = json.loads(client.messages[0][1]["content"])["context"]
+                self.assertEqual(model_context, [{"role": "user", "content": "a" * 1000}, *context[1:]])
+                self.assertEqual(output["context_truncated"], oldest_length > 1000)
+
     def test_direct_open_and_ownership(self):
         client = FakeClient([{"action": "get_document", "doc_id": "a"},
                              {"action": "get_document", "doc_id": "b"}])

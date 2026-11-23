@@ -1,8 +1,9 @@
-# Разбор прогона КТ3
+# Разбор исходного прогона КТ3 (full-01)
 
 Один полный прогон открытого набора, commit `cc92f4e0854b919e4067674bddd52fdc3aa4f30a`.
 Модель Junkie — `google/gemini-3.5-flash-lite`, temperature=0.
-Числа — в [RESULTS.md](RESULTS.md), ответы и трейсы — в
+Числа этого исторического прогона — в `report.json` внутри архива; актуальное
+[сравнение с full-02](RESULTS.md) опубликовано отдельно. Ответы и трейсы — в
 [full-01.zip](results/full-01.zip): `<variant>/search.jsonl`, `scenarios.jsonl`, `report.json`.
 
 Junkie находит нужный документ в 93 из 116 search-кейсов: HitRate@5=80,17%.

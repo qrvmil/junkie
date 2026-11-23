@@ -1,4 +1,4 @@
-"""Ingestion metrics from runner observations and hash-bound human reviews."""
+"""Ingestion metrics from runner observations and hash-bound metadata reviews."""
 
 import math
 import re
@@ -57,13 +57,13 @@ def _and(checks):
 
 def _field_review(review, field):
     if review is None:
-        return pending("Human metadata review is missing")
+        return pending("Metadata review is missing")
     fields = review.get("fields", {})
     if not isinstance(fields, dict):
         raise ValueError("metadata review: fields must be an object")
     item = fields.get(field)
     if item is None or (isinstance(item, dict) and item.get("passed") is None):
-        return pending(f"Human review of {field} is missing")
+        return pending(f"Review of {field} is missing")
     if (not isinstance(item, dict) or type(item.get("passed")) is not bool
             or not _present(item.get("reason"))):
         raise ValueError(f"metadata review: {field} needs boolean passed and a reason")
@@ -77,7 +77,7 @@ def _tags(tags, review):
         return cell(0, "Tags must be nonempty strings"), cell(0, "Invalid tag list")
     count_check = cell(0, "Fewer than three tags") if len(tags) < 3 else None
     if review is None or review.get("tags") is None:
-        return count_check or pending("Distinct tag concepts need human review"), pending("Tags need human review")
+        return count_check or pending("Distinct tag concepts need review"), pending("Tags need review")
     judgments = review["tags"]
     if not isinstance(judgments, list):
         raise ValueError("metadata review: tags must be a list")

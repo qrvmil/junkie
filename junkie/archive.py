@@ -151,6 +151,7 @@ class Archive:
     def __init__(self, root):
         self.root = Path(root).resolve()
         self.documents = {}
+        self.fact_repairs = []
         self.last_read_doc_ids = []
         self.preparation = {"errors": [], "elapsed_ms": 0, "documents": 0, "searchable": 0}
 
@@ -160,6 +161,7 @@ class Archive:
         result.documents = {key: {**value, "metadata": deepcopy(value.get("metadata", {})),
                                   "content_events": deepcopy(value.get("content_events", []))}
                             for key, value in self.documents.items()}
+        result.fact_repairs = deepcopy(self.fact_repairs)
         result.preparation = deepcopy(self.preparation)
         return result
 
@@ -188,6 +190,27 @@ class Archive:
         record["terms"] = Counter(tokenize(path.name + " " + text))
         record["length"] = sum(record["terms"].values())
         return record
+
+    def refresh_content_events(self, doc_id, user_id):
+        """Rebuild date facts from the pinned source version in the owner's archive."""
+        record = self.documents.get(doc_id)
+        if record is None or record["owner_id"] != user_id:
+            raise ToolError("not_found_or_forbidden")
+        if not record["searchable"]:
+            raise ToolError("unavailable")
+        path = _source_path(self.root, record["path"])
+        text, digest = _text(path, record["sha256"], use_cache=False)
+        events = metadata_from_text(text, path.name, record["uploaded_at"])["content_events"]
+        previous = record["content_events"]
+        metadata = record["metadata"]
+        if previous == events and metadata.get("content_events", events) == events:
+            return
+        self.fact_repairs.append({"doc_id": doc_id, "owner_id": user_id, "source_sha256": digest,
+                                  "before": deepcopy(previous), "after": deepcopy(events),
+                                  "reason": "reextracted_from_source"})
+        record["content_events"] = events
+        if "content_events" in metadata:
+            metadata["content_events"] = deepcopy(events)
 
     def _card(self, record, query=""):
         text = record["text"]

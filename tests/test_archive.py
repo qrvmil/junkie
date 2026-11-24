@@ -22,6 +22,39 @@ class ArchiveTests(unittest.TestCase):
         return {"doc_id": id_, "path": path, "owner_id": owner, "source_type": "file",
                 "uploaded_at": "2026-10-24", "sha256": hashlib.sha256(file.read_bytes()).hexdigest(), **extra}
 
+    def test_poisoned_exam_date_propagates_until_source_refresh(self):
+        archive = build_archive(self.root, [self.source("exam", "Экзамен 12 июня 2026 года."),
+                                            self.source("other", "Экзамен 13 июня 2026 года.")])
+
+        def matches(day):
+            bounds = {"event": "exam_date", "gte": f"2026-06-{day}", "lt": f"2026-06-{day + 1}"}
+            result = archive.search("", {"content_date": bounds}, "relevance", 5, "a")
+            return [card["doc_id"] for card in result["results"]]
+
+        self.assertEqual(matches(12), ["exam"])
+        self.assertEqual(matches(19), [])
+        record = archive.documents["exam"]
+        record["content_events"][0]["date"] = "2026-06-19"
+        self.assertEqual(matches(19), ["exam"])
+        self.assertEqual(matches(12), [])
+        with self.assertRaises(ToolError):
+            archive.refresh_content_events("exam", "b")
+        archive.refresh_content_events("exam", "a")
+        self.assertEqual(matches(12), ["exam"])
+        self.assertEqual(matches(19), [])
+        self.assertEqual(matches(13), ["other"])
+        self.assertEqual(record["metadata"]["content_events"], record["content_events"])
+        repair, = archive.fact_repairs
+        self.assertEqual(repair["before"][0]["date"], "2026-06-19")
+        self.assertEqual(repair["after"][0]["date"], "2026-06-12")
+        self.assertEqual(repair["source_sha256"], record["sha256"])
+        archive.refresh_content_events("exam", "a")
+        self.assertEqual(len(archive.fact_repairs), 1)
+        (self.root / "exam.txt").write_text("Экзамен 19 июня 2026 года.")
+        with self.assertRaisesRegex(ValueError, "hash mismatch"):
+            archive.refresh_content_events("exam", "a")
+        self.assertEqual(matches(12), ["exam"])
+
     def test_bm25_length_normalization_changes_overlap_order(self):
         rows = [self.source("short", "needle compact"), self.source("long", "needle " * 5 + "padding " * 100)]
         archive = build_archive(self.root, rows)
